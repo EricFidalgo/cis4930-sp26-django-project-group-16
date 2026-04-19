@@ -1,0 +1,18 @@
+{% extends 'myapp/base.html' %}
+{% block content %}
+<div class="card mt-4 border-danger shadow-sm w-50 mx-auto">
+    <div class="card-header bg-danger text-white">
+        <h3 class="mb-0">Confirm Deletion</h3>
+    </div>
+    <div class="card-body">
+        <p class="lead">Are you sure you want to delete the record for <strong>{{ record.location.name }}</strong>?</p>
+        <p><strong>Exam Score:</strong> {{ record.exam_score }}</p>
+        <p><strong>Hours Studied:</strong> {{ record.hours_studied }}</p>
+        <form method="post" class="mt-4">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Yes, Delete</button>
+            <a href="{% url 'record_detail' record.id %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

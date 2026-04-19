@@ -1,0 +1,16 @@
+{% extends 'myapp/base.html' %}
+{% block content %}
+<div class="card shadow-sm mt-4">
+    <div class="card-body text-center p-5">
+        <h1 class="card-title">Student Performance Factors</h1>
+        <p class="card-text lead mt-3">
+            This dataset tracks variables like study hours and parental education levels to analyze impacts on final exam scores.
+            Navigate the app to add new performance records, browse existing data, or view our interactive statistical dashboards.
+        </p>
+        <div class="mt-4">
+            <a href="{% url 'record_list' %}" class="btn btn-primary mx-2">Browse Records</a>
+            <a href="{% url 'analytics' %}" class="btn btn-secondary mx-2">View Analytics</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

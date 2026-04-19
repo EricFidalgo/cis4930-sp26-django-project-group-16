@@ -1,0 +1,23 @@
+{% extends 'myapp/base.html' %}
+{% block content %}
+<div class="card mt-4 shadow-sm w-50 mx-auto">
+    <div class="card-header bg-primary text-white">
+        <h3 class="mb-0">Record Detail #{{ record.id }}</h3>
+    </div>
+    <div class="card-body">
+        <ul class="list-group list-group-flush mb-4">
+            <li class="list-group-item"><strong>Location:</strong> {{ record.location.name }}</li>
+            <li class="list-group-item"><strong>Hours Studied:</strong> {{ record.hours_studied }}</li>
+            <li class="list-group-item"><strong>Exam Score:</strong> {{ record.exam_score }}</li>
+            <li class="list-group-item"><strong>Parental Education:</strong> {{ record.get_parental_education_display }}</li>
+        </ul>
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'record_list' %}" class="btn btn-secondary">Back to List</a>
+            <div>
+                <a href="{% url 'record_update' record.id %}" class="btn btn-warning">Edit</a>
+                <a href="{% url 'record_delete' record.id %}" class="btn btn-danger">Delete</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

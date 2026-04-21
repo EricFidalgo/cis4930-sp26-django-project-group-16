@@ -1,51 +1,44 @@
 import requests
 from django.core.management.base import BaseCommand
-
-from myapp.models import Location, WeatherRecord
-
-OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
-
-CITIES = {
-    "Tallahassee": {"latitude": 30.4383, "longitude": -84.2807},
-    "Miami": {"latitude": 25.7617, "longitude": -80.1918},
-    "Orlando": {"latitude": 28.5383, "longitude": -81.3792},
-}
-
+from django.db import transaction
+from myapp.models import WeatherRecord, Location
+from datetime import datetime
 
 class Command(BaseCommand):
-    help = "Fetches current Open-Meteo forecast data and stores daily max temperatures."
+    help = 'Fetch latest data from the weather API (Project 2)'
 
     def handle(self, *args, **options):
-        for city_name, coordinates in CITIES.items():
-            params = {
-                "latitude": coordinates["latitude"],
-                "longitude": coordinates["longitude"],
-                "daily": "temperature_2m_max",
-                "timezone": "America/New_York",
-            }
-
+        # coordinates mapping for the required cities
+        locations = {
+            'Tallahassee': {'lat': 30.4383, 'lon': -84.2807},
+            'Miami': {'lat': 25.7617, 'lon': -80.1918},
+            'Orlando': {'lat': 28.5383, 'lon': -81.3792}
+        }
+        
+        for city_name, coords in locations.items():
             try:
-                response = requests.get(OPEN_METEO_URL, params=params, timeout=10)
-                response.raise_for_status()
-            except requests.RequestException as exc:
-                self.stderr.write(self.style.ERROR(f"Failed to fetch {city_name}: {exc}"))
-                continue
-
-            daily = response.json().get("daily", {})
-            dates = daily.get("time", [])
-            temperatures = daily.get("temperature_2m_max", [])
-            location, _ = Location.objects.get_or_create(name=city_name)
-
-            saved_count = 0
-            for record_date, temperature in zip(dates, temperatures):
-                _, created = WeatherRecord.objects.update_or_create(
-                    location=location,
-                    date=record_date,
-                    defaults={"temperature": temperature, "source": "api"},
+                # hitting the open-meteo api for hourly temps
+                resp = requests.get(
+                    'https://api.open-meteo.com/v1/forecast',
+                    params={'latitude': coords['lat'], 'longitude': coords['lon'], 'hourly': 'temperature_2m'},
+                    timeout=10
                 )
-                if created:
-                    saved_count += 1
-
-            self.stdout.write(
-                self.style.SUCCESS(f"Synced {city_name}: {saved_count} new weather records.")
-            )
+                resp.raise_for_status()
+                data = resp.json()
+                
+                loc, _ = Location.objects.get_or_create(name=city_name)
+                
+                # wrap in a transaction so if it crashes mid-loop we don't get partial data
+                with transaction.atomic():
+                    for i, temp in enumerate(data['hourly']['temperature_2m'][:24]):
+                        date_str = data['hourly']['time'][i][:10]
+                        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+                        
+                        WeatherRecord.objects.update_or_create(
+                            location=loc,
+                            date=date_obj,
+                            defaults={'temperature': temp, 'source': 'api'}
+                        )
+                self.stdout.write(self.style.SUCCESS(f'Fetched API data for {city_name}'))
+            except requests.exceptions.RequestException as e:
+                self.stderr.write(self.style.ERROR(f'Error fetching {city_name}: {e}'))

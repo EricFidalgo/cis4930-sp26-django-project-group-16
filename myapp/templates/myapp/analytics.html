@@ -1,128 +1,154 @@
 {% extends 'myapp/base.html' %}
-
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="mb-1">Analytics Dashboard</h2>
-        <p class="text-muted mb-0">Interactive summaries generated from the student records in the database.</p>
+<h2 class="mb-4 text-center">Analytics Dashboard</h2>
+
+<div class="card mb-5 shadow-sm">
+    <div class="card-header bg-dark text-white fw-bold">General Summary Statistics</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped text-center mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Metric</th>
+                        <th>Count</th>
+                        <th>Mean</th>
+                        <th>Std Dev</th>
+                        <th>Min</th>
+                        <th>Max</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="fw-bold">Hours Studied</td>
+                        <td>{{ summary.hours_studied.count|floatformat:0 }}</td>
+                        <td>{{ summary.hours_studied.mean|floatformat:2 }}</td>
+                        <td>{{ summary.hours_studied.std|floatformat:2 }}</td>
+                        <td>{{ summary.hours_studied.min|floatformat:2 }}</td>
+                        <td>{{ summary.hours_studied.max|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">Exam Score</td>
+                        <td>{{ summary.exam_score.count|floatformat:0 }}</td>
+                        <td>{{ summary.exam_score.mean|floatformat:2 }}</td>
+                        <td>{{ summary.exam_score.std|floatformat:2 }}</td>
+                        <td>{{ summary.exam_score.min|floatformat:2 }}</td>
+                        <td>{{ summary.exam_score.max|floatformat:2 }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
-    <a href="{% url 'record_list' %}" class="btn btn-outline-secondary">Back to Records</a>
 </div>
 
-{% if not summary %}
-<div class="alert alert-info">
-    No student records are available yet. Run the seed command or add records manually to populate the dashboard.
-</div>
-{% else %}
-<div class="row g-4">
-    <div class="col-lg-6">
-        <div class="card shadow-sm h-100">
-            <div class="card-header fw-semibold">Average Score by Parental Education</div>
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 shadow-sm">
             <div class="card-body">
-                <canvas id="parentEducationChart" height="240"></canvas>
+                <h5 class="card-title text-center">Average Exam Score by Parental Education</h5>
+                <canvas id="barChart"></canvas>
             </div>
         </div>
     </div>
-    <div class="col-lg-6">
-        <div class="card shadow-sm h-100">
-            <div class="card-header fw-semibold">Average Score by Study Hours</div>
-            <div class="card-body">
-                <canvas id="studyHoursChart" height="240"></canvas>
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-8">
-        <div class="card shadow-sm h-100">
-            <div class="card-header fw-semibold">Hours Studied vs. Exam Score</div>
-            <div class="card-body">
-                <canvas id="scatterChart" height="260"></canvas>
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-header fw-semibold">Location Summary</div>
-            <div class="card-body">
-                {% if location_summary %}
-                <ul class="list-group list-group-flush">
-                    {% for location, score in location_summary.items %}
-                    <li class="list-group-item d-flex justify-content-between px-0">
-                        <span>{{ location }}</span>
-                        <strong>{{ score }}</strong>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <p class="text-muted mb-0">No location data available.</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
-{% endblock %}
 
-{% block scripts %}
-{% if summary %}
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title text-center">Average Score by Study Hour Band</h5>
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title text-center">Correlation: Hours Studied vs Exam Score</h5>
+                <canvas id="scatterChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-5 shadow-sm">
+    <div class="card-header bg-secondary text-white fw-bold">Performance Summary by Location</div>
+    <div class="card-body p-0">
+        <table class="table table-striped table-hover text-center mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Location</th>
+                    <th>Average Exam Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for location, avg_score in location_summary.items %}
+                <tr>
+                    <td>{{ location }}</td>
+                    <td>{{ avg_score }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const parentEducationData = JSON.parse('{{ bar_json|escapejs }}');
-    const studyHoursData = JSON.parse('{{ study_line_json|escapejs }}');
-    const scatterData = JSON.parse('{{ scatter_json|escapejs }}');
+    const barData = {{ bar_json|default:"{}"|safe }};
+    const scatterRawData = {{ scatter_json|default:"{}"|safe }};
+    const lineData = {{ study_line_json|default:"{}"|safe }};
 
-    new Chart(document.getElementById('parentEducationChart'), {
+    new Chart(document.getElementById('barChart'), {
         type: 'bar',
         data: {
-            labels: parentEducationData.labels,
+            labels: barData.labels || [],
             datasets: [{
-                label: 'Average Exam Score',
-                data: parentEducationData.values,
-                backgroundColor: '#0d6efd'
+                label: 'Average Score',
+                data: barData.values || [],
+                backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
             }]
         },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, max: 100 } }
-        }
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
     });
 
-    new Chart(document.getElementById('studyHoursChart'), {
+    // Render Line Chart
+    new Chart(document.getElementById('lineChart'), {
         type: 'line',
         data: {
-            labels: studyHoursData.labels,
+            labels: lineData.labels || [],
             datasets: [{
-                label: 'Average Exam Score',
-                data: studyHoursData.values,
-                borderColor: '#198754',
-                backgroundColor: 'rgba(25, 135, 84, 0.15)',
-                tension: 0.25,
+                label: 'Avg Exam Score',
+                data: lineData.values || [],
+                borderColor: '#1d3557',
+                backgroundColor: 'rgba(29, 53, 87, 0.1)',
+                tension: 0.3,
                 fill: true
             }]
         },
-        options: {
-            responsive: true,
-            scales: { y: { beginAtZero: true, max: 100 } }
-        }
+        options: { responsive: true, scales: { y: { beginAtZero: false } } }
     });
+
+    // Render Scatter Chart
+    const scatterPoints = (scatterRawData.x && scatterRawData.y) 
+        ? scatterRawData.x.map((val, i) => ({ x: val, y: scatterRawData.y[i] })) : [];
 
     new Chart(document.getElementById('scatterChart'), {
         type: 'scatter',
         data: {
             datasets: [{
                 label: 'Student Records',
-                data: scatterData.x.map((x, index) => ({ x: x, y: scatterData.y[index] })),
-                backgroundColor: 'rgba(220, 53, 69, 0.65)'
+                data: scatterPoints,
+                backgroundColor: 'rgba(255, 99, 132, 0.6)',
             }]
         },
         options: {
             responsive: true,
             scales: {
                 x: { title: { display: true, text: 'Hours Studied' } },
-                y: { title: { display: true, text: 'Exam Score' }, beginAtZero: true, max: 100 }
+                y: { title: { display: true, text: 'Exam Score' } }
             }
         }
     });
 </script>
-{% endif %}
 {% endblock %}

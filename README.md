@@ -64,7 +64,11 @@ A Django-based web app for analyzing how various factors, ranging from study hab
     ```bash
     python manage.py migrate
     ```
-4.  **Start Server:**
+4.  **Load the student dataset:**
+    ```bash
+    python manage.py seed_data
+    ```
+5.  **Start Server:**
     ```bash
     python manage.py runserver
     ```

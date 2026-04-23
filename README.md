@@ -72,3 +72,10 @@ A Django-based web app for analyzing how various factors, ranging from study hab
     ```bash
     python manage.py runserver
     ```
+
+## Deployment Readiness
+
+```bash
+$ python manage.py check --deploy --settings=config.settings.prod
+System check identified no issues (0 silenced).
+```
